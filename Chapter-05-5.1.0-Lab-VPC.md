@@ -44,6 +44,9 @@ You will build:
 
 Cost Note: A NAT Gateway and Elastic IP accrue hourly + data processing charges. Delete resources when done.
 
+---
+
+**Complete Architecture**:
 <img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/7902e623-ded4-4f08-bc39-50765c09599c" />
 
 ---
@@ -77,7 +80,7 @@ Path: VPC Console → Subnets → Create subnet (repeat per subnet).
 - VPC: `lab-vpc`
 - Subnet name: `Public Subnet 1`
 - AZ: `us-east-1a`
-- CIDR: `10.0.0.0/24`
+- IPv4 Subnet CIDR: `10.0.0.0/24`
 - Create
 - Select it → Actions → Edit subnet settings → Enable “Auto-assign public IPv4” → Save.
 
@@ -85,14 +88,14 @@ Path: VPC Console → Subnets → Create subnet (repeat per subnet).
 - VPC: `lab-vpc`
 - Name: `Private Subnet 1`
 - AZ: `us-east-1a`
-- CIDR: `10.0.1.0/24`
+- IPv4 Subnet CIDR: `10.0.1.0/24`
 - Create (leave auto-assign public IPv4 disabled).
 
 ### Public Subnet 2
 - VPC: `lab-vpc`
 - Name: `Public Subnet 2`
 - AZ: `us-east-1b`
-- CIDR: `10.0.2.0/24`
+- IPv4 Subnet CIDR: `10.0.2.0/24`
 - Create
 - Enable auto-assign public IPv4 (same steps as first public subnet).
 
@@ -100,7 +103,7 @@ Path: VPC Console → Subnets → Create subnet (repeat per subnet).
 - VPC: `lab-vpc`
 - Name: `Private Subnet 2`
 - AZ: `us-east-1b`
-- CIDR: `10.0.3.0/24`
+- IPv4 Subnet CIDR: `10.0.3.0/24`
 - Create (auto-assign public IPv4 stays disabled).
 
 Verification: Public Subnet 1 & 2 show auto-assign public IPv4 enabled; the two private subnets do not.
@@ -118,7 +121,7 @@ Verification: Public Subnet 1 & 2 show auto-assign public IPv4 enabled; the two 
 ## 5. Elastic IP (for NAT Gateway)
 
 1. Left nav: Elastic IP addresses → Allocate Elastic IP address.
-2. Defaults OK; (optional Tag Name: `lab-nat-eip`) → Allocate.
+2. Defaults OK; (Tag Name: `lab-nat-eip`) → Allocate.
 
 ---
 
@@ -162,7 +165,7 @@ Quick Check:
 - lab-private-rt has 0.0.0.0/0 → nat-...
 
 ---
-**Complete Architecture**:
+**Complete Resource Map**:
 <img width="1121" height="398" alt="Screenshot 2025-08-24 at 9 00 09 AM" src="https://github.com/user-attachments/assets/50a30893-6664-49d7-b6f3-ba35a31f93d7" />
 
 ---
@@ -184,11 +187,9 @@ Quick Check:
 ## 10. Key Pair
 
 1. EC2 → Key pairs → Create key pair.
-2. Name: `vockey`
+2. Name: `MyLoginKey`
 3. Type: RSA; Format: `.pem` (unless you need `.ppk` for PuTTY).
 4. Create & store securely.
-
-(If `vockey` already exists in us-east-1, reuse it.)
 
 ---
 
@@ -197,10 +198,10 @@ Quick Check:
 Note: If a “RHEL 10” AMI isn’t available, pick the latest RHEL 9 image. This script is compatible with both.
 
 1. EC2 → Instances → Launch instances.
-2. Name: `Web Server 1`
+2. Name: `MyApp`
 3. Application and OS Image: Search “Red Hat Enterprise Linux” → select the latest official RHEL (HVM, x86_64).
 4. Instance type: `t2.micro`.
-5. Key pair: `vockey`.
+5. Key pair: `MyLoginKey`.
 6. Network settings (Edit):
    - VPC: `lab-vpc`
    - Subnet: `Public Subnet 2 (us-east-1b)`
