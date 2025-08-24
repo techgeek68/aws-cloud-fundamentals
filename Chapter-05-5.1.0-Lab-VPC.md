@@ -347,17 +347,7 @@ If any field shows “N/A”, refresh once (the token might have briefly failed)
 
 ---
 
-## 14. (Optional) NAT Gateway Test
-
-(Requires additional instance or SSM access.)
-1. Launch a temporary t2.micro in `Private Subnet 1` (no public IP).
-2. From that instance (via SSM or a bastion):  
-   `curl -I https://www.amazon.com`
-3. A 200 / 301 style response indicates outbound via NAT Gateway works.
-
----
-
-## 15. Optional Tagging
+## 15. Optional Tagging 
 
 Apply tags like `Project=lab` to:
 - VPC
@@ -369,7 +359,7 @@ Apply tags like `Project=lab` to:
 - Elastic IP
 - EC2 Instance
 
-Improves cost visibility.
+*Improves cost visibility.*
 
 ---
 
