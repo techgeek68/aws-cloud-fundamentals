@@ -121,7 +121,7 @@ Verification: Public Subnet 1 & 2 show auto-assign public IPv4 enabled; the two 
 ## 5. Elastic IP (for NAT Gateway)
 
 1. Left nav: Elastic IP addresses → Allocate Elastic IP address.
-2. Defaults OK; (Tag Name: `lab-nat-eip`) → Allocate.
+2. Tag Name:`lab-nat-eip`; OK; → Allocate.
 
 ---
 
@@ -205,7 +205,7 @@ Note: If a “RHEL 10” AMI isn’t available, pick the latest RHEL 9 image. Th
 6. Network settings (Edit):
    - VPC: `lab-vpc`
    - Subnet: `Public Subnet 2 (us-east-1b)`
-   - Auto-assign public IP: Enabled
+   - Auto-assign public IP: Enable
    - Firewall: Select existing security group → `Web Security Group`
 7. Storage: Leave default (8–10 GiB gp3).
 8. Advanced details → User data → paste the script below.
@@ -402,3 +402,77 @@ Logs & Diagnostics:
 - Security Group currently allows HTTP from everywhere—tighten for production (e.g., your IP only) and enable HTTPS (ALB or Let’s Encrypt) if exposing publicly.
 
 ---
+
+**Deleting a VPC (Virtual Private Cloud):**
+
+
+### **Step 1: Prepare for Deletion**
+- **Backup any necessary data** or configurations.
+- **Verify dependencies:** Ensure no production workloads depend on this VPC. Identify connected resources (EC2, RDS, ELB, etc.).
+
+---
+
+### **Step 2: Delete VPC Dependencies**
+Before you can delete the VPC, you must remove all its dependent resources:
+
+1. **Terminate EC2 Instances:**  
+   - Go to EC2 Dashboard → Instances.
+   - Select and terminate all instances in the VPC.
+
+2. **Delete Security Groups (except default):**  
+   - Go to VPC → Security Groups.
+   - Delete custom security groups.
+
+3. **Delete Subnets:**  
+   - Go to VPC → Subnets.
+   - Delete all subnets in the VPC.
+
+4. **Release Elastic IPs:**  
+   - Go to EC2 → Elastic IPs.
+   - Release any allocated Elastic IPs associated with the VPC.
+
+5. **Delete Internet Gateway:**  
+   - Go to VPC → Internet Gateways.
+   - Detach and then delete the Internet Gateway.
+
+6. **Delete NAT Gateways:**  
+   - Go to VPC → NAT Gateways.
+   - Delete any NAT Gateway in the VPC.
+
+7. **Delete Route Tables (except main):**  
+   - Go to VPC → Route Tables.
+   - Delete custom route tables.
+
+8. **Delete Network ACLs (except default):**  
+   - Go to VPC → Network ACLs.
+   - Delete custom ACLs.
+
+9. **Delete Endpoints, Peering Connections, VPN Gateways:**  
+   - Go to VPC → Endpoints, Peering Connections, VPN Gateways.
+   - Delete these resources if present.
+
+10. **Delete RDS Instances, ELB, Redshift, etc.:**  
+    - Go to the respective services and delete resources associated with the VPC.
+
+---
+
+### **Step 3: Delete the VPC**
+- Go to **VPC Dashboard** → **Your VPCs**.
+- Select the VPC you wish to delete.
+- Click **Actions** → **Delete VPC**.
+- Confirm the deletion.
+
+---
+
+### **Step 4: Verify Deletion**
+- Ensure the VPC no longer appears in the VPC Dashboard.
+- Confirm that all associated resources have been deleted.
+
+---
+
+## **Notes**
+- **AWS CLI:** You can also perform these steps using the AWS CLI by listing and deleting resources (`aws ec2 terminate-instances`, `aws ec2 delete-subnet`, etc.), then `aws ec2 delete-vpc`.
+- **IAM Permissions:** Ensure you have adequate permissions to delete resources.
+- **Irrecoverable:** VPC deletion is permanent. There’s no way to restore a deleted VPC.
+---
+
