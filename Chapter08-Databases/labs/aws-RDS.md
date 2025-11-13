@@ -605,9 +605,6 @@ header('Location: login.php');
 exit;
 ?>
 ```
-    
-- Endpoint example: <img width="611" height="268" alt="Screenshot 2025-11-13 at 1 12 58 PM" src="https://github.com/user-attachments/assets/d3425b5b-e3e5-47e7-9e99-ad374157e386" />
-
       
 - Example :
        `sudo vim /var/www/html/config.php`
@@ -670,6 +667,10 @@ sudo systemctl restart httpd
 **Connect the App to the RDS Database**
 1. Open your web app (browser, using the EC2 public IP).
 2. Your PHP app should connect to the RDS endpoint with the credentials above.
+3. Endpoint example:
+       <img width="611" height="268" alt="Screenshot 2025-11-13 at 1 12 58 PM" src="https://github.com/user-attachments/assets/d3425b5b-e3e5-47e7-9e99-ad374157e386" />
+
+Login Page:
 
 <img width="920" height="475" alt="Screenshot 2025-11-13 at 1 28 25 PM" src="https://github.com/user-attachments/assets/5166ca5c-2c93-4631-ae9b-107ea33d93fd" />
 
@@ -677,10 +678,10 @@ sudo systemctl restart httpd
 **Test and Validate**
 - Add/edit/delete records in the app.
 - Confirm data persists and is stored in the RDS database.
-
+- Database:
 <img width="1457" height="918" alt="Screenshot 2025-11-13 at 1 30 43 PM" src="https://github.com/user-attachments/assets/90a72d66-f0e1-4353-9844-df4aa7158ee6" />
 
-
+- Searching:
 <img width="1237" height="385" alt="Screenshot 2025-11-13 at 1 31 18 PM" src="https://github.com/user-attachments/assets/8009bda4-aa24-43be-9da0-409e0d451c52" />
 
 
