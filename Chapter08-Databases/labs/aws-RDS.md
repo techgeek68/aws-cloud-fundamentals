@@ -1,22 +1,43 @@
 # Lab: Build Your DB Server and Interact With Your DB Using an App
 
+Amazon RDS is an Amazon Web Services (AWS) fully managed service that makes it easier to set up, operate, and scale a relational database in the cloud. It automates administrative tasks, such as provisioning, patching, backups, recovery, and failure detection, freeing teams up to focus more on innovating applications.
+
+**Features and Advantages**
+
+  - Managed Service: AWS is responsible for core database management tasks, which reduces operational overhead and lets developers and DBAs focus on application development.
+    
+  - Multiple Database Engines: Supports several popular and industry-standard engines, including:
+    - Amazon Aurora (MySQL- and PostgreSQL-compatible)
+    - PostgreSQL
+    - MySQL
+    - MariaDB
+    - Oracle
+    - Microsoft SQL Server
+    - Db2
+
+  - Scalability: Increase or decrease compute, memory, and storage resources with little to no downtime. Some database engines support storage auto-scaling to dynamically adjust capacity.
+    
+  - High availability and durability: Multi-AZ deployments ensure a highly available environment because of the synchronous replication between Availability Zones, together with automatic failover for minimally interrupted events.
+    
+  - Automated Backups and Recovery: RDS performs automatic backups and transaction logging, allowing for point-in-time recovery within a retention period of up to 35 days. Manual snapshots can also be created for long-term retention.
+    
+  - Security: Offers network isolation via Amazon VPC, encryption at rest with AWS KMS, and encryption in transit using SSL. Integration with AWS Identity and Access Management (IAM) enables fine-grained access control.
+
+  - Performance: Offers SSD-backed storage (General Purpose and Provisioned IOPS) and features like Optimized Reads and Optimized Writes to deliver high and consistent performance across workloads.
+
 ---
 
-## Objectives:
+
+**Objectives:**
 - Set up a secure AWS VPC and networking for web and database servers.
 - Deploy an Amazon RDS MySQL Multi-AZ instance and connect it to an EC2 web server.
 - Build and test a simple web app that performs CRUD operations on the RDS database.
 - Learn best practices for troubleshooting and cleaning up AWS resources.
   
----
-
-## Prerequisites
-
-- AWS account with permissions for VPC, EC2, RDS
-- Region: us-east-1 (N. Virginia) or your preferred region
 
 ---
-## Architectural Diagram:
+
+**Architectural Diagram:**
 
 Here’s an ASCII architectural diagram of the AWS RDS lab, styled like your example.
 
@@ -82,133 +103,135 @@ Traffic flow (simplified):
 - EC2 → RDS Primary on TCP 3306 (private VPC path)
 - RDS Primary ⇄ RDS Standby: synchronous replication across AZs
 - RDS is not publicly accessible (no public endpoint)
-```
 
+```
 
 ---
 
-## 1. **Create a VPC**
+
+**Create a VPC**
    1. In the AWS Console, go to the **VPC** service.
    2. Click **Your VPCs** in the left navigation pane, then **Create VPC**.
    3. Select **VPC only**.
    4. Configure:
-      - **Name tag:** `Lab VPC`
-      - **IPv4 CIDR block:** `10.0.0.0/16`
-      - **IPv6 CIDR block:** No IPv6 CIDR (leave unchecked/None)
-      - **Tenancy:** Default
+      - Name tag: `DB VPC`
+      - IPv4 CIDR block: `10.0.0.0/16`
+      - IPv6 CIDR block: No IPv6 CIDR (leave unchecked/None)
+      - Tenancy: Default
    5. Click **Create VPC**.
 
----
 
-## 2. **Create Subnets** (at least three: one public, two private for DB)
-
-   - Go to **Subnets** in the VPC console.
-   - Click **Create subnet**.
-   - Configure and create subnets as follows:
+**Create Subnets**
+  - At least three subnets: one public, two private for DB
+     - Select **DB VPC**
+     - Go to **Subnets** in the VPC console.
+     - Click **Create subnet**.
+     - Configure and create subnets as follows:
 
    **a) Public-subnet-01 (for Web/App Server)**
-   - **VPC:** Lab VPC
-   - **Subnet name:** `Public-subnet-01`
-   - **Availability Zone:** `us-east-1a`
-   - **IPv4 CIDR block:** `10.0.0.0/24`
+     - VPC: **DB VPC**
+     - Subnet name: `DB Public-subnet-01`
+     - Availability Zone: `us-east-1a`
+     - IPv4 subnet CIDR block: `10.0.0.0/24`
 
    **b) DB-subnet-01 (Private for RDS)**
-   - **VPC:** Lab VPC
-   - **Subnet name:** `DB-subnet-01`
-   - **Availability Zone:** `us-east-1a`
-   - **IPv4 CIDR block:** `10.0.1.0/24`
+     - VPC: **DB VPC**
+     - Subnet name: `DB Private-subnet-01`
+     - Availability Zone: `us-east-1a`
+     - IPv4 subnet CIDR block: `10.0.1.0/24`
 
    **c) DB-subnet-02 (Private for RDS)**
-   - **VPC:** Lab VPC
-   - **Subnet name:** `DB-subnet-02`
-   - **Availability Zone:** `us-east-1b`
-   - **IPv4 CIDR block:** `10.0.3.0/24`
+       - VPC: **DB VPC**
+       - Subnet name: `DB Private-subnet-02`
+       - Availability Zone: `us-east-1b`
+       - IPv4 CIDR block: `10.0.3.0/24`
 
-   - Click **Create subnet** after configuring each.
 
----
+**Create an Internet Gateway and Attach to VPC**
 
-## 3. **Create an Internet Gateway and Attach to VPC**
+   1. Go to **Internet gateways** in the VPC console.
+   2. Create Internet Gateway.
+      - Name tag: `DB Lab-igw`
+   3. Action > Attach to VPC > Available VPCs > DB VPC
 
-   1. Go to **Internet Gateways** in the VPC console.
-   2. Click **Create internet gateway**.
-      - **Name tag:** `Lab-igw`
-   3. Create and **attach it to Lab VPC**.
 
----
+**Configure Route Tables**
 
-## 4. **Configure Route Tables**
-
-### a) **Public Route Table (for Public-subnet-01)**
-   1. Go to **Route Tables** in the VPC console.
+a) **Public Route Table (DB Public-subnet-01)**
+   1. Go to **Route tables** in the VPC console.
    2. Create a new route table:
-      - **Name tag:** `Lab-public-rt`
-      - **VPC:** Lab VPC
-   3. Select the new route table, go to **Routes** tab > **Edit routes**.
+      - Name tag: `DB Lab-public-rt`
+      - VPC: `DB VPC`
+   3. Select the new route table, go to **Routes** > **Edit routes**.
       - Add route:
-        - **Destination:** `0.0.0.0/0`
-        - **Target:** Your Internet Gateway (`Lab-igw`)
-   4. Go to **Subnet associations** tab > **Edit subnet associations**.
-      - **Select:** `Public-subnet-01`
-      - Click **Save associations**.
+        - Destination: `0.0.0.0/0`
+        - Target: Internet Gateway (`igw- DB Lab-igw`)
+   4. Go to Subnet associations > Explicit subnet associations > Edit subnet associations.
+      - Select `DB Public-subnet-01`
+      - Click Save associations.
 
-### b) **Private Route Table (optional, for DB subnets)**
+b) **Private Route Table (Optional, for DB subnets)**
    - The default route table (created with your VPC) can be used for private subnets. No route to Internet Gateway is needed for DB subnets.
 
----
 
-## 5. **Create Security Groups**
+5. **Create Security Groups**
 
-### a) **Web Security Group**
-- In **EC2 > Security Groups**
-  - Name: `Web Security Group`
-  - Description: Allow HTTP/SSH from anywhere (or your IP)
-  - VPC: Lab VPC
-  - Inbound Rule: HTTP (80) from `0.0.0.0/0`
-  - Inbound Rule: SSH (22) from `0.0.0.0/0` or Only from your IP
-  - Outbound: All traffic
+a) **DB Web Security Group**
+- In the left side pane, Security > Security Groups
+- Create security group
+    - Name: `DB Web Security Group`
+    - Description: Allow HTTP/SSH from anywhere                    
+    - VPC: `DB VPC`
+  - Inbound rules > Add rules
+    - Inbound Rule: HTTP (80) from `0.0.0.0/0`
+    - Inbound Rule: SSH (22) from `0.0.0.0/0` or Only from your IP
+    - Outbound: All traffic
 
-### b) **DB Security Group**
-- Name: `DB Security Group`
-- Description: Permit access from Web Security Group
-- VPC: Lab VPC
-- Inbound Rule: MySQL/Aurora (3306) source from **Web Security Group** (select by SG ID)
-- Outbound: All traffic
+b) **DB Security Group**
+- In the left side pane, Security > Security Groups
+- Create security group
+    - Name: `DB Security Group`
+    - Description: Permit access from Web Security Group
+    - VPC: `DB VPC`
+  - Inbound rules
+    - Inbound Rule: MySQL/Aurora (3306), Source Type: Custom, Source: `DB Web Security Group` (select by SG ID)
+    - Outbound: All traffic
 
----
 
-## 6. **Create a DB Subnet Group**
+**Create a DB Subnet Group**
+  - Search for **Aurora and RDS**
+  - Aurora and RDS > Dashboard > Subnet groups > Create DB subnet group
+  - Name: `DB-Lab-Subnet-Group`
+  - Description: `DB Subnet Group`
+  - VPC: `DB VPC`
+  - Add subnets:
+     - Availability Zones`us-east-1a` `us-east-1b`,
+     - Subnets: `DB Private-subnet-01`, `DB Private-subnet-02`
+  - Create
 
-1. Go to **RDS > Subnet groups > Create DB Subnet Group**
-2. Name: `Lab-DB-Subnet-Group`
-3. Description: `DB Subnet Group`
-4. VPC: Lab VPC
-5. Add subnets: Availability Zones`us-east-1a` `us-east-1b`, Subnets: **DB-subnet-01** and **DB-subnet-02**
-6. Create
 
----
-
-## 7. **Launch Amazon RDS Multi-AZ DB Instance**
-
-1. Go to **RDS > Databases > Create database**
-2. Standard create
-3. Engine: **MySQL**
-4. Template: **Dev/Test**
-5. Availability: **Multi-AZ DB instance(2 instances)**
-6. Settings:
-    - DB instance identifier: `lab-db`
+**Launch Amazon RDS Multi-AZ DB Instance**
+  - Go to Aurora and RDS > Dashboard > Databases > Create database
+    - Standard create
+    - Engine: **MySQL**
+    - Template: **Dev/Test**
+  - Availability: **Multi-AZ DB instance deployment (2 instances)**
+  - Settings:
+    - DB instance identifier: `db-lab`
     - Master username: `admin`
-    - Self managed credentials
-    - Master password: `lab-password`
-7. DB instance class: Burstable classes `db.t3.micro`
-8. Storage: General Purpose SSD (gp2), 20 GiB
-9. Connectivity:
+    - Credentials management
+      - Self-managed credentials
+      - Master password: `lab-password`
+  - DB instance class: Burstable classes `db.t3.micro`
+  - Storage: General Purpose SSD (gp3), 20 GiB
+  - Connectivity:
     - Don't connect to an EC2 compute resource
     - Network type: IPV4
-    - VPC: Lab VPC
+    - VPC: `DB VPC`
+    - DB subnet group: `db-lab-subnet-group`
     - Subnet group: `Lab-DB-Subnet-Group`
     - **Public access: No**
-    - VPC Security Group: **DB Security Group**
+    - VPC security group: **DB Security Group**
     - Enhanced Monitoring **Disable**
 10. Additional configuration:
     - Initial database name: `lab`
@@ -219,25 +242,23 @@ Traffic flow (simplified):
     - Under the Connectivity & security tab, look for Endpoint & port.
     - The endpoint will look like: `lab-db.cr0s8miyua9l.us-east-1.rds.amazonaws.com`
 
----
 
-## 8. **Launch a Web Server EC2 Instance in the Public Subnet**
+8. **Launch a Web Server EC2 Instance in the Public Subnet**
 
 1. Go to **EC2 > Instances > Launch Instances**
     - Name: `DBAppServer`
     - AMI: Amazon Linux 2
     - Instance type: `t2.micro`
-    - Key pair: Create/download as needed
-    - Network: Edit **Lab VPC**, **Subnet: Public-subnet-01**
+    - Key pair: Create
+    - Network: Edit **DB VPC**, **Subnet: DB Public-subnet-01**
     - Auto-assign public IP: **Enable**
-    - Security group: **Web Security Group**
+    - Security group: **DB Web Security Group**
     - Lunch instance
 2. Wait for the instance to start.
 3. Note the public IP address.
 
----
 
-## 9. **Deploy a Web App on the Instance**
+**SSH Login**
 
 - Go to the directory where the key is located, `chmod 400 	dbkey.pem` 
 - SSH into the instance:
@@ -247,11 +268,9 @@ Traffic flow (simplified):
     ```sh
        ssh -i "dbkey.pem" ec2-user@3.231.105.221
     ```
-    
-- Install Apache, PHP, and MySQL client:
-    ```sh
-       sudo yum update -y
-    ```
+
+**Deploy a Web App on the Instance**
+  - Install Apache, PHP, and MySQL client:
     ```sh
        sudo yum install -y httpd php php-mysqlnd
     ```
@@ -261,17 +280,19 @@ Traffic flow (simplified):
     ```sh
        sudo systemctl start httpd
     ```
+    
 - Deploy a sample PHP app that connects to MySQL using the RDS endpoint.
   
 - Place your `index.php` and `config.php` in `/var/www/html/`
-  
-    - Example:
-         `sudo vim index.php`
-      
+- Index page:
+         `sudo vim /var/www/html/index.php`
 ```php
-    <?php
+<?php
+// index.php - main application page
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+
+// config.php will start the session and redirect to login.php if needed
 require_once 'config.php';
 
 // Create students table if it doesn't exist
@@ -303,7 +324,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_student'])) {
     if ($conn->query($sql)) {
         $insertMsg = "<span style='color: green;'>Student added successfully!</span>";
     } else {
-        $insertMsg = "<span style='color: red;'>Error: {$conn->error}</span>";
+        $insertMsg = "<span style='color: red;'>Error: " . htmlspecialchars($conn->error) . "</span>";
     }
 }
 
@@ -314,7 +335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_student'])) {
     if ($conn->query($sql)) {
         $insertMsg = "<span style='color: green;'>Student deleted successfully!</span>";
     } else {
-        $insertMsg = "<span style='color: red;'>Error deleting student: {$conn->error}</span>";
+        $insertMsg = "<span style='color: red;'>Error deleting student: " . htmlspecialchars($conn->error) . "</span>";
     }
 }
 
@@ -343,7 +364,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_student'])) {
     if ($conn->query($sql)) {
         $insertMsg = "<span style='color: green;'>Student updated successfully!</span>";
     } else {
-        $insertMsg = "<span style='color: red;'>Error updating student: {$conn->error}</span>";
+        $insertMsg = "<span style='color: red;'>Error updating student: " . htmlspecialchars($conn->error) . "</span>";
     }
 }
 
@@ -359,13 +380,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search_student'])) {
         $student = $res->fetch_assoc();
         $searchResult = "<h3>Student Found:</h3>
         <ul>
-            <li>First Name: {$student['first_name']}</li>
-            <li>Last Name: {$student['last_name']}</li>
-            <li>Age: {$student['age']}</li>
-            <li>College Name: {$student['college_name']}</li>
-            <li>Program Name: {$student['program_name']}</li>
-            <li>Year: {$student['year']}</li>
-            <li>Semester: {$student['semester']}</li>
+            <li>First Name: " . htmlspecialchars($student['first_name']) . "</li>
+            <li>Last Name: " . htmlspecialchars($student['last_name']) . "</li>
+            <li>Age: " . htmlspecialchars($student['age']) . "</li>
+            <li>College Name: " . htmlspecialchars($student['college_name']) . "</li>
+            <li>Program Name: " . htmlspecialchars($student['program_name']) . "</li>
+            <li>Year: " . htmlspecialchars($student['year']) . "</li>
+            <li>Semester: " . htmlspecialchars($student['semester']) . "</li>
         </ul>";
     } else {
         $searchResult = "<span style='color: red;'>No student found with that name.</span>";
@@ -381,7 +402,6 @@ if ($res) {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -400,6 +420,7 @@ if ($res) {
 </head>
 <body>
     <h1>Student Database Web App</h1>
+    <p><a href="logout.php">Change DB connection</a><?php if (!empty($_SESSION['db_host'])): ?> — Connected to: <?php echo htmlspecialchars($_SESSION['db_host']); ?><?php endif; ?></p>
 
     <?php echo $insertMsg; ?>
 
@@ -473,20 +494,160 @@ if ($res) {
 </body>
 </html>
 ```
-      
-    - Example :
-       `sudo vim config.php`
-       
+
+- Login page
+  - sudo vi /var/www/html/login.php
 ```php
 <?php
-define('DB_HOST', 'lab-db.cr0s8miyua9l.us-east-1.rds.amazonaws.com'); // Replace with your own
-define('DB_USER', 'admin');        // RDS master username (from your setup)
-define('DB_PASS', 'lab-password'); // RDS master password
-define('DB_NAME', 'lab');          // Initial database name
-$conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+// login.php - prompts for RDS endpoint, DB username, and password before allowing access
+session_start();
+
+$error = '';
+$prev_host = '';
+$prev_dbname = isset($_SESSION['db_name']) ? htmlspecialchars($_SESSION['db_name']) : 'lab';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $host = trim($_POST['db_host'] ?? '');
+    $user = trim($_POST['db_user'] ?? '');
+    $pass = $_POST['db_pass'] ?? '';
+    $dbname = trim($_POST['db_name'] ?? '');
+
+    // Keep sanitized previous host to pre-fill on error
+    $prev_host = htmlspecialchars($host);
+
+    // Quick validation
+    if ($host === '' || $user === '') {
+        $error = 'Please provide both the RDS endpoint and username.';
+    } else {
+        // Try connecting with supplied credentials (default DB 'lab' if none provided)
+        $testDb = $dbname !== '' ? $dbname : 'lab';
+        $mysqli = @new mysqli($host, $user, $pass, $testDb);
+        if ($mysqli->connect_error) {
+            $error = 'Connection failed: ' . htmlspecialchars($mysqli->connect_error);
+            // If the DB name caused the failure, we still allow the user to try without it.
+        } else {
+            // Success: store credentials in session and redirect to main app
+            $_SESSION['db_host'] = $host;
+            $_SESSION['db_user'] = $user;
+            $_SESSION['db_pass'] = $pass;
+            $_SESSION['db_name'] = $testDb;
+            $mysqli->close();
+            header('Location: index.php');
+            exit;
+        }
+    }
+} else {
+    // If there was a previous failed connection saved in session, show it
+    if (!empty($_SESSION['db_error'])) {
+        $error = 'Previous connection failed: ' . htmlspecialchars($_SESSION['db_error']);
+        unset($_SESSION['db_error']);
+    }
 }
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>DB Connection - Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        form { padding: 15px; border: 1px solid #ccc; width: 420px; }
+        label { display:block; margin-bottom: 10px; }
+        .btn { padding: 6px 12px; cursor: pointer; }
+        .error { color: #c0392b; margin-bottom: 10px; }
+        .note { color: #666; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>Enter RDS Connection Details</h1>
+    <?php if ($error): ?>
+        <div class="error"><?php echo $error; ?></div>
+    <?php endif; ?>
+    <form method="post" autocomplete="off">
+        <label>
+            RDS Endpoint (host):
+            <input type="text" name="db_host" required value="<?php echo $prev_host; ?>" style="width:100%;">
+        </label>
+        <label>
+            Database Username:
+            <input type="text" name="db_user" required style="width:100%;">
+        </label>
+        <label>
+            Database Password:
+            <input type="password" name="db_pass" required style="width:100%;">
+        </label>
+        <label>
+            Database Name (optional, defaults to "lab"):
+            <input type="text" name="db_name" value="<?php echo $prev_dbname; ?>" style="width:100%;">
+        </label>
+        <br>
+        <input type="submit" value="Connect" class="btn">
+    </form>
+
+    <p class="note">Note: credentials are stored only in your session for the duration of the browser session. For production, use environment variables or a secrets manager instead of storing credentials in sessions.</p>
+</body>
+</html>
+```
+
+- Logout page:
+  - `sudo vi /var/www/html/logout.php`
+```php
+<?php
+// logout.php - clears DB credentials from session and redirects to login page
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+// Only clear DB-related session keys
+unset($_SESSION['db_host'], $_SESSION['db_user'], $_SESSION['db_pass'], $_SESSION['db_name'], $_SESSION['db_error']);
+
+// Redirect to login so the user can re-enter credentials
+header('Location: login.php');
+exit;
+?>
+```
+    
+- Endpoint example: <img width="611" height="268" alt="Screenshot 2025-11-13 at 1 12 58 PM" src="https://github.com/user-attachments/assets/d3425b5b-e3e5-47e7-9e99-ad374157e386" />
+
+      
+- Example :
+       `sudo vim /var/www/html/config.php`
+```php
+<?php
+// config.php - establishes DB connection using credentials stored in session.
+// If credentials are missing, redirect to login.php.
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Require DB credentials in session
+if (
+    empty($_SESSION['db_host']) ||
+    empty($_SESSION['db_user']) ||
+    !array_key_exists('db_pass', $_SESSION) // allow empty password but must be set
+) {
+    header('Location: login.php');
+    exit;
+}
+
+$db_host = $_SESSION['db_host'];
+$db_user = $_SESSION['db_user'];
+$db_pass = $_SESSION['db_pass'];
+$db_name = !empty($_SESSION['db_name']) ? $_SESSION['db_name'] : 'lab';
+
+// Attempt to connect
+$conn = @new mysqli($db_host, $db_user, $db_pass, $db_name);
+if ($conn->connect_error) {
+    // Store a sanitized error message in session and clear credentials so user can re-enter them
+    $_SESSION['db_error'] = $conn->connect_error;
+    // Clear stored credentials to prevent using broken creds
+    unset($_SESSION['db_host'], $_SESSION['db_user'], $_SESSION['db_pass'], $_SESSION['db_name']);
+    header('Location: login.php');
+    exit;
+}
+
+// Optional: set charset
+$conn->set_charset('utf8mb4');
 ?>
 ```
 
@@ -504,38 +665,29 @@ sudo chmod 644 /var/www/html/*.php
 ```bash
 sudo systemctl restart httpd
 ```
----
 
-## 10. **Connect the App to the RDS Database**
 
+**Connect the App to the RDS Database**
 1. Open your web app (browser, using the EC2 public IP).
 2. Your PHP app should connect to the RDS endpoint with the credentials above.
 
----
+<img width="920" height="475" alt="Screenshot 2025-11-13 at 1 28 25 PM" src="https://github.com/user-attachments/assets/5166ca5c-2c93-4631-ae9b-107ea33d93fd" />
 
-## 11. **Test and Validate**
 
+**Test and Validate**
 - Add/edit/delete records in the app.
 - Confirm data persists and is stored in the RDS database.
 
-<img width="950" height="520" alt="Screenshot 2025-09-16 at 12 32 41 PM" src="https://github.com/user-attachments/assets/53359f61-c012-4bb6-a8d0-2bc8c7fbe347" />
-
-<img width="932" height="854" alt="Screenshot 2025-09-16 at 12 31 33 PM" src="https://github.com/user-attachments/assets/2c9a0fc5-6e53-4cf6-85a2-c96fc404eac5" />
-
-<img width="1470" height="786" alt="Screenshot 2025-09-16 at 12 40 02 PM" src="https://github.com/user-attachments/assets/9e68465a-c1bb-4fd1-92dd-aa4f4cd8db8a" />
+<img width="1457" height="918" alt="Screenshot 2025-11-13 at 1 30 43 PM" src="https://github.com/user-attachments/assets/90a72d66-f0e1-4353-9844-df4aa7158ee6" />
 
 
----
+<img width="1237" height="385" alt="Screenshot 2025-11-13 at 1 31 18 PM" src="https://github.com/user-attachments/assets/8009bda4-aa24-43be-9da0-409e0d451c52" />
 
-## 12. **Clean Up Resources** (Optional) 
 
-- Terminate EC2 instance
-- Delete RDS DB instance and snapshots
-- Delete security groups, subnet group, subnets, route tables, and VPC
 
 ---
 
-## **Troubleshooting**
+**Troubleshooting**
 
 | Symptom                   | Possible Cause                       | Fix                                  |
 |---------------------------|--------------------------------------|--------------------------------------|
@@ -544,444 +696,5 @@ sudo systemctl restart httpd
 | No public IP on instance  | Subnet not public/auto-assign off    | Use public subnet, assign public IP  |
 | App errors                | PHP/MySQL not installed              | Install required packages            |
 
----
-
 
 ---
-## Challenge Lab (Optional): Create a complete, production-ready JavaScript full-stack app that replicates the PHP student-registration app from earlier.
-
-- **Backend:** Node.js (Express)
-- **Database:** MySQL (connect to AWS RDS)
-- **Frontend:** React (single-page app)
-- **API:** RESTful
-- **Features:** Add, search, edit, and delete students
-- **Security:** Basic input validation, CORS enabled
-
-
-## Hints: 
-
----
-
-**Directory structure:**
-```
-/var/www/html/frontend/
-├── package.json
-├── public/
-│   └── index.html
-├── src/
-│   ├── App.js
-│   └── index.js
-```
----
----
-
-## 1. **Backend (Node.js/Express)**
-
-Create a folder called `backend/`, and add the following files:
-
----
-
-### `backend/package.json`
-```json name=backend/package.json
-{
-  "name": "student-db-backend",
-  "version": "1.0.0",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "mysql2": "^3.5.2"
-  }
-}
-```
-
----
-
-### `backend/db.js`
-```javascript name=backend/db.js
-const mysql = require('mysql2/promise');
-
-const pool = mysql.createPool({
-  host: 'lab-db.cr0s8miyua9l.us-east-1.rds.amazonaws.com', // RDS endpoint
-  user: 'admin', // RDS username
-  password: 'lab-password', // RDS password
-  database: 'lab', // Database name
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
-
-module.exports = pool;
-```
-
----
-
-### `backend/server.js`
-```javascript name=backend/server.js
-const express = require('express');
-const cors = require('cors');
-const pool = require('./db');
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// Ensure table exists
-(async () => {
-  try {
-    const sql = `CREATE TABLE IF NOT EXISTS students (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      first_name VARCHAR(50) NOT NULL,
-      last_name VARCHAR(50) NOT NULL,
-      age INT,
-      college_name VARCHAR(100),
-      program_name VARCHAR(100),
-      year INT,
-      semester VARCHAR(20)
-    )`;
-    const conn = await pool.getConnection();
-    await conn.query(sql);
-    conn.release();
-  } catch (err) {
-    console.error('Error creating students table:', err);
-  }
-})();
-
-// Add student
-app.post('/api/students', async (req, res) => {
-  try {
-    const { first_name, last_name, age, college_name, program_name, year, semester } = req.body;
-    if (!first_name || !last_name) {
-      return res.status(400).json({ error: 'First name and last name are required.' });
-    }
-    const [result] = await pool.query(
-      'INSERT INTO students (first_name, last_name, age, college_name, program_name, year, semester) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [first_name, last_name, age, college_name, program_name, year, semester]
-    );
-    res.json({ id: result.insertId });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get all students
-app.get('/api/students', async (req, res) => {
-  try {
-    const [rows] = await pool.query('SELECT * FROM students ORDER BY id DESC');
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Search student by first and last name
-app.get('/api/students/search', async (req, res) => {
-  try {
-    const { first_name, last_name } = req.query;
-    const [rows] = await pool.query(
-      'SELECT * FROM students WHERE first_name = ? AND last_name = ? LIMIT 1',
-      [first_name, last_name]
-    );
-    if (rows.length === 0) return res.status(404).json({ error: 'No student found.' });
-    res.json(rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Edit student
-app.put('/api/students/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { first_name, last_name, age, college_name, program_name, year, semester } = req.body;
-    const [result] = await pool.query(
-      'UPDATE students SET first_name=?, last_name=?, age=?, college_name=?, program_name=?, year=?, semester=? WHERE id=?',
-      [first_name, last_name, age, college_name, program_name, year, semester, id]
-    );
-    res.json({ success: result.affectedRows > 0 });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Delete student
-app.delete('/api/students/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const [result] = await pool.query('DELETE FROM students WHERE id=?', [id]);
-    res.json({ success: result.affectedRows > 0 });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-```
-
----
-
-## 2. **Frontend (React)**
-
-Create a folder called `frontend/`, and add the following files:
-
----
-
-### `frontend/package.json`
-```json name=frontend/package.json
-{
-  "name": "student-db-frontend",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build"
-  },
-  "dependencies": {
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
-    "react-scripts": "^5.0.1",
-    "axios": "^1.6.7"
-  }
-}
-```
-
----
-
-### `frontend/src/App.js`
-```javascript name=frontend/src/App.js
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-
-const API = "http://localhost:4000/api/students";
-
-function App() {
-  const [students, setStudents] = useState([]);
-  const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
-    age: "",
-    college_name: "",
-    program_name: "",
-    year: "",
-    semester: ""
-  });
-  const [editId, setEditId] = useState(null);
-  const [searchForm, setSearchForm] = useState({
-    first_name: "",
-    last_name: ""
-  });
-  const [searchResult, setSearchResult] = useState(null);
-  const [msg, setMsg] = useState("");
-
-  useEffect(() => {
-    fetchStudents();
-  }, []);
-
-  const fetchStudents = async () => {
-    const res = await axios.get(API);
-    setStudents(res.data);
-  };
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-  const handleSearchChange = (e) => {
-    setSearchForm({ ...searchForm, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (editId) {
-      await axios.put(`${API}/${editId}`, form);
-      setMsg("Student updated successfully!");
-      setEditId(null);
-    } else {
-      await axios.post(API, form);
-      setMsg("Student added successfully!");
-    }
-    setForm({
-      first_name: "",
-      last_name: "",
-      age: "",
-      college_name: "",
-      program_name: "",
-      year: "",
-      semester: ""
-    });
-    fetchStudents();
-  };
-
-  const handleEdit = (student) => {
-    setEditId(student.id);
-    setForm(student);
-    setMsg("");
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm("Delete this student?")) {
-      await axios.delete(`${API}/${id}`);
-      setMsg("Student deleted successfully!");
-      fetchStudents();
-    }
-  };
-
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.get(`${API}/search`, { params: searchForm });
-      setSearchResult(res.data);
-    } catch (err) {
-      setSearchResult(null);
-      setMsg("No student found.");
-    }
-  };
-
-  return (
-    <div style={{ fontFamily: "Arial, sans-serif", margin: 40 }}>
-      <h1>Student Database Web App</h1>
-      {msg && <div style={{ color: "green" }}>{msg}</div>}
-
-      <h2>{editId ? "Edit Student" : "Add New Student"}</h2>
-      <form onSubmit={handleSubmit} style={{ marginBottom: 20, padding: 15, border: "1px solid #ccc", width: 350 }}>
-        <label>First Name: <input type="text" name="first_name" required value={form.first_name} onChange={handleChange} /></label><br /><br />
-        <label>Last Name: <input type="text" name="last_name" required value={form.last_name} onChange={handleChange} /></label><br /><br />
-        <label>Age: <input type="number" name="age" required value={form.age} onChange={handleChange} /></label><br /><br />
-        <label>College Name: <input type="text" name="college_name" required value={form.college_name} onChange={handleChange} /></label><br /><br />
-        <label>Program Name: <input type="text" name="program_name" required value={form.program_name} onChange={handleChange} /></label><br /><br />
-        <label>Year: <input type="number" name="year" required value={form.year} onChange={handleChange} /></label><br /><br />
-        <label>Semester: <input type="text" name="semester" required value={form.semester} onChange={handleChange} /></label><br /><br />
-        <button type="submit">{editId ? "Update Student" : "Add Student"}</button>
-        {editId && <button type="button" onClick={() => { setEditId(null); setForm({ first_name: "", last_name: "", age: "", college_name: "", program_name: "", year: "", semester: "" }); }}>Cancel</button>}
-      </form>
-
-      <h2>Search Student</h2>
-      <form onSubmit={handleSearch} style={{ marginBottom: 20, padding: 15, border: "1px solid #ccc", width: 350 }}>
-        <label>First Name: <input type="text" name="first_name" required value={searchForm.first_name} onChange={handleSearchChange} /></label><br /><br />
-        <label>Last Name: <input type="text" name="last_name" required value={searchForm.last_name} onChange={handleSearchChange} /></label><br /><br />
-        <button type="submit">Search</button>
-      </form>
-      {searchResult && (
-        <div>
-          <h3>Student Found:</h3>
-          <ul>
-            <li>First Name: {searchResult.first_name}</li>
-            <li>Last Name: {searchResult.last_name}</li>
-            <li>Age: {searchResult.age}</li>
-            <li>College Name: {searchResult.college_name}</li>
-            <li>Program Name: {searchResult.program_name}</li>
-            <li>Year: {searchResult.year}</li>
-            <li>Semester: {searchResult.semester}</li>
-          </ul>
-        </div>
-      )}
-
-      <h2>All Students</h2>
-      <table style={{ borderCollapse: "collapse", width: "90%" }}>
-        <thead>
-          <tr>
-            <th>ID</th><th>First Name</th><th>Last Name</th><th>Age</th><th>College Name</th>
-            <th>Program Name</th><th>Year</th><th>Semester</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {students.map(student =>
-            <tr key={student.id}>
-              <td>{student.id}</td>
-              <td>{student.first_name}</td>
-              <td>{student.last_name}</td>
-              <td>{student.age}</td>
-              <td>{student.college_name}</td>
-              <td>{student.program_name}</td>
-              <td>{student.year}</td>
-              <td>{student.semester}</td>
-              <td>
-                <button onClick={() => handleEdit(student)}>Edit</button>
-                <button style={{ color: "white", background: "#e74c3c", marginLeft: 5 }} onClick={() => handleDelete(student.id)}>Delete</button>
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-export default App;
-```
-
----
-
-### `frontend/src/index.js`
-```javascript name=frontend/src/index.js
-import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App";
-
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
-```
-
----
-
-### `frontend/public/index.html`
-```html name=frontend/public/index.html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Student Database Web App</title>
-</head>
-<body>
-  <div id="root"></div>
-</body>
-</html>
-```
-
----
-
-## 3. **How to Run**
-
-**Backend:**
-1.  Install Node.js and npm (On Amazon Linux 2) run:
-
-`curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
-sudo yum install -y nodejs`
-
-2. Edit `backend/db.js` with your actual RDS credentials.
-3. Run:
-   ```sh
-   cd backend
-   npm install
-   npm start
-   ```
-
-**Frontend:**
-1. Run:
-   ```sh
-   cd frontend
-   npm install
-   npm start
-   ```
->By default, frontend runs on: localhost:3000 and expects backend at: localhost:4000
-
-
-**Access the App**
-Frontend:
-   Open `http://<your-ec2-public-ip>:3000` in your browser.
-   
-Backend API: 
-   Runs on port 4000 by default `http://<your-ec2-public-ip>:4000`
-
-**Deploying to Production:**
-- Use environment variables for database secrets.
-- Serve the React build with Express in production.
-- Secure API routes, add authentication if needed.
-
----
-
-
