@@ -1,14 +1,58 @@
-## Challenge Lab (Optional): Create a complete, production-ready JavaScript full-stack app that replicates the PHP student-registration app from earlier.
+## Challenge Lab: Amazon RDS + Full-Stack Student App
 
+---
+
+**Objective**
+  - Plan your database.
+  - Create an Amazon RDS PostgreSQL.
+  - Configure networking (VPC + security groups).
+  - Connect from a Node.js (Express) backend on EC2 (or local) and React frontend.
+  - Perform CRUD operations.
+  - Enable monitoring & logging.
+  - Take snapshots (backups).
+
+---
+
+**Architecture**
+```
+[Your Browser] 
+      |
+ (HTTP :3000 / :4000)
+      |
+[EC2 Instance: Node + React build]
+      |
+ (PostgreSQL TCP 5432 - allowed via security group)
+      |
+[RDS PostgreSQL Instance]
+```
+
+---
+
+**Data flow**
+```
+Browser → HTTP (React) → Express API → MySQL queries → RDS → Response back
+```
+
+---
+
+**Planning**
 - **Backend:** Node.js (Express)
-- **Database:** MySQL (connect to AWS RDS)
 - **Frontend:** React (single-page app)
 - **API:** RESTful
 - **Features:** Add, search, edit, and delete students
 - **Security:** Basic input validation, CORS enabled
-
-
-## Hints: 
+- **RDS Setup**
+  * **Engine** PostgreSQL
+  * **Instance class** db.t3.micro
+  * **Storage** 20 GB GP3
+  * **Availability** Single-AZ (lab) / Multi-AZ (production)
+  * **Authentication** Username: admin + strong password
+  * **Database name** lab
+  * **Connectivity** Inside VPC; public access OFF (use EC2 if needed)
+  * **Backup retention** 7 days (default)
+  * **Performance Insights** ON
+  * **Enhanced Monitoring** 
+  * **Log exports** Slow query log & error log to CloudWatch
 
 ---
 
@@ -22,8 +66,83 @@
 │   ├── App.js
 │   └── index.js
 ```
+
 ---
+**Create an RDS PostgreSQL Instance**
+  - AWS Console → RDS → Databases → Create database
+  - Standard create
+    
+  - Engine Options:
+    - PostgreSQL
+      - Version: Latest
+        
+  - Templates:
+    - Dev/Test
+      
+  - Availability and durability
+    - Multi-AZ DB instance deployment (2 instances)
+      
+  - Settings:
+   * DB instance identifier: challenge-lab-db
+   * Credentials Settings
+     * **Master username:** postgres
+       * Credentials management: Self managed
+       * Master password: Example `xL5!qN7&`              [At least 8 printable ASCII characters. Can't contain any of the following symbols: / ' " @]
+       * Confirm master password: `xL5!qN7&`              
+         
+  - Instance configuration
+    - DB Instance Class:
+      - Burstable classes
+         * db.t3.micro
+           
+  - Storage:
+     * 20 GB GP3      
+  - Additional storage configuration
+     * Disable storage autoscaling
+       
+  - Connectivity:
+     * Don’t connect to an EC2 compute resource
+     * Network type: IPv4
+     * VPC: default
+     * Public access: No (preferred; use EC2 access)
+     * VPC Security Group: Create new (e.g., `rds-postgres-sg`)
+
+  - Tags - optional
+    - Key: Name Value:MyDB
+
+  - Database authentication
+    - Password authentication
+
+  - Monitoring
+    - Database Insights - Standard
+    - Performance Insights: Yes
+    - Enhanced Monitoring
+      - Enable Enhanced monitoring
+    - Log exports
+      - PostgreSQL log
+    
+  - Additional Configuration:
+     * Initial database name: MyTestDB
+     * Backups:
+       * Enable automated backup: retention 1–7 days
+
+  - Create Database:
+     * Click **Create database**
+     * Wait for status: **Creating → Available** (green)
+     * Copy the **Endpoint** from the Connectivity & Security tab once ready
+
+
+**Common Mistakes**
+
+* Forgetting to set the **DB name** → backend cannot connect to `lab`
+* Setting **Public access = Yes** and allowing `0.0.0.0/0` on port 5432 → security risk
+
 ---
+
+
+
+---
+
 
 ## 1. **Backend (Node.js/Express)**
 
