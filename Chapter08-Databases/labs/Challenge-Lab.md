@@ -1,4 +1,4 @@
-## Challenge Lab: Amazon RDS + Full-Stack Student App
+## Challenge Lab: Amazon RDS + Full Stack Student App
 
 ---
 
@@ -30,7 +30,7 @@
 
 **Data flow**
 ```
-Browser → HTTP (React) → Express API → MySQL queries → RDS → Response back
+Browser → HTTP (React) → Express API → PostgreSQL queries → RDS → Response back
 ```
 
 ---
@@ -108,7 +108,7 @@ Browser → HTTP (React) → Express API → MySQL queries → RDS → Response 
      * VPC Security Group: Create new (e.g., `rds-postgres-sg`)
 
   - Tags - optional
-    - Key: Name Value:MyDB
+    - Key: Name Value: MyDB
 
   - Database authentication
     - Password authentication
@@ -128,25 +128,92 @@ Browser → HTTP (React) → Express API → MySQL queries → RDS → Response 
 
   - Create Database:
      * Click **Create database**
-     * Wait for status: **Creating → Available** (green)
+     * Wait for status: **Creating → Available**
      * Copy the **Endpoint** from the Connectivity & Security tab once ready
-
-
-**Common Mistakes**
-
-* Forgetting to set the **DB name** → backend cannot connect to `lab`
-* Setting **Public access = Yes** and allowing `0.0.0.0/0` on port 5432 → security risk
+      * Example: Connectivity & security > Endpoint: challenge-lab-db.crfdwj9l0deg.us-east-1.rds.amazonaws.com
 
 ---
 
+**EC2 Instance and Security Group**
+  * Navigate: AWS Console → EC2 → Instances → Launch instances
+    * Name: myDBserver
+    * Select AMI: Ubuntu 24.04 LTS
+    * Choose Instance Type: t2.micro
+    * Key pair
+      * Create key pair
+        * Key pair name: myDBserverLogin
+        * Key pair type: RSA
+        * Private key file format: .pem 
+    
+  * Network settings:
+    * Network: Edit
+      * VPC: default
+      * Subnet: Public Subnet 1 [Availability Zone: us-east-1a]
+      * Auto-assign public IP: Enable
+      * Firewall (security groups): 
+        * Create a security group
+          * Name: WebSecurityGroup
+          * Description: Allowing SSH and HTTP
+          * SSH (22) → Source type: My IP only
+          * HTTP (80) → Source type: Anywhere-IPv4
+  * Add Storage: 8–20 GB (adjust as needed)
 
+* Access Instance:
+
+  ```bash
+  ssh -i "your-key.pem" ubuntu@<Public-IP>
+  ```
+  Example:
+  ```
+  ssh -i "myDBserverLogin.pem" ubuntu@3.238.186.46
+  ```
 
 ---
 
+**Edit Security Group**
+  - EC2 > Network & Security > Security Groups > rds-postgres-sg > Action > Edit inbound rules
+  - Remove existing rule
+  - Edit
+    - Inbound rules
+      - Type: PostgreSQL, Source type: Custom, Source: WebSecurityGroup
+      
+---
 
-## 1. **Backend (Node.js/Express)**
+**Install Required Software on Ubuntu EC2**
+  - Update and install Node.js 18, Git, and PostgreSQL client:
+```bash
+# Install Node.js 18 via NodeSource
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs git build-essential
 
-Create a folder called `backend/`, and add the following files:
+# Install PostgreSQL client (psql)
+sudo apt-get install -y postgresql-client```
+```
+
+ - Connectivity test (replace endpoint):
+```bash
+psql "host=challenge-lab-db.crfdwj9l0deg.us-east-1.rds.amazonaws.com user=postgres dbname=MyTestDB port=5432"
+```
+
+```text
+Password: xL5!qN7&
+```
+
+```sql
+SELECT version();            # Press `q` to quit
+```
+
+- \q to quit
+
+---
+
+**Backend (Node.js/Express, PostgreSQL)**
+ - Create the backend folder on EC2 (you can place it under /var/www/html for consistency):
+```bash
+sudo mkdir -p /var/www/html/backend
+sudo chown -R ubuntu:ubuntu /var/www/html
+cd /var/www/html/backend
+```
 
 ---
 
@@ -289,6 +356,29 @@ app.delete('/api/students/:id', async (req, res) => {
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+```
+
+---
+
+**Install and run:**
+```bash
+cd /var/www/html/backend
+cp .env.example .env
+# Edit .env and set DB_PASSWORD and DB_HOST to your RDS endpoint
+
+npm install
+npm start
+# Server running on port 4000
+```
+
+---
+**Frontend (React SPA)**
+
+- Create the frontend structure under /var/www/html/frontend as you specified:
+```
+sudo mkdir -p /var/www/html/frontend
+sudo chown -R ubuntu:ubuntu /var/www/html/frontend
+cd /var/www/html/frontend
 ```
 
 ---
