@@ -1,4 +1,4 @@
-# Lab: Build Your DB Server and Interact With Your DB Using an App
+# Lab: Build a Database Server and Interact With the Database Using an Application
 
 Amazon RDS is an Amazon Web Services (AWS) fully managed service that makes it easier to set up, operate, and scale a relational database in the cloud. It automates administrative tasks, such as provisioning, patching, backups, recovery, and failure detection, freeing teams up to focus more on innovating applications.
 
