@@ -1,4 +1,7 @@
 **Services covered in this course**
+
+---
+
 **Compute services:**
   - Amazon EC2
   - AWS Lambda
@@ -49,10 +52,5 @@
   - AWS Cost & Usage Report
   - AWS Budgets
   - AWS Cost Explorer
-
-
-
----
-
 
 ---
