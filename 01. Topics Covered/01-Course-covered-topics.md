@@ -1,4 +1,4 @@
-**Services covered in this course**
+## Services covered in this course
 
 ---
 
