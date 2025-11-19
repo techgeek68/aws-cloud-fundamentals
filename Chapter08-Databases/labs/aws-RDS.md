@@ -1,4 +1,14 @@
-# Lab: Build a Database Server and Interact With the Database Using an Application
+# Lab: Build a Database Server and Interact With the Database
+
+---
+
+**Objectives:**
+- Set up a secure AWS VPC and networking for web and database servers.
+- Deploy an Amazon RDS MySQL Multi-AZ instance and connect it to an EC2 web server.
+- Build and test a simple web app that performs CRUD operations on the RDS database.
+- Learn best practices for troubleshooting and cleaning up AWS resources.
+
+---
 
 Amazon RDS is an Amazon Web Services (AWS) fully managed service that makes it easier to set up, operate, and scale a relational database in the cloud. It automates administrative tasks, such as provisioning, patching, backups, recovery, and failure detection, freeing teams up to focus more on innovating applications.
 
@@ -15,7 +25,7 @@ Amazon RDS is an Amazon Web Services (AWS) fully managed service that makes it e
     - Microsoft SQL Server
     - Db2
 
-  - Scalability: Increase or decrease compute, memory, and storage resources with little to no downtime. Some database engines support storage auto-scaling to dynamically adjust capacity.
+  - Scalability: Increase or decrease compute, memory, and storage resources with little to no downtime. Some database engines support storage auto-scaling to adjust capacity dynamically.
     
   - High availability and durability: Multi-AZ deployments ensure a highly available environment because of the synchronous replication between Availability Zones, together with automatic failover for minimally interrupted events.
     
@@ -24,15 +34,6 @@ Amazon RDS is an Amazon Web Services (AWS) fully managed service that makes it e
   - Security: Offers network isolation via Amazon VPC, encryption at rest with AWS KMS, and encryption in transit using SSL. Integration with AWS Identity and Access Management (IAM) enables fine-grained access control.
 
   - Performance: Offers SSD-backed storage (General Purpose and Provisioned IOPS) and features like Optimized Reads and Optimized Writes to deliver high and consistent performance across workloads.
-
----
-
-
-**Objectives:**
-- Set up a secure AWS VPC and networking for web and database servers.
-- Deploy an Amazon RDS MySQL Multi-AZ instance and connect it to an EC2 web server.
-- Build and test a simple web app that performs CRUD operations on the RDS database.
-- Learn best practices for troubleshooting and cleaning up AWS resources.
   
 
 ---
